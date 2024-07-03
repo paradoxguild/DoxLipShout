@@ -1,0 +1,4 @@
+## Interface: 100200
+## Title: DoxLipShout
+## SavedVariables: potionTimers, shoutTimers, friendlyUnits, frameData
+lipshout.lua
