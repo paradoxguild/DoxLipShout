@@ -157,22 +157,13 @@ frame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3, arg4)
         guid = arg2;
         isPassiveEffect = string.len(guid) > 7 and string.sub(guid, 1, 7) == "Cast-4-"; -- type 4 can be seen https://wowpedia.fandom.com/wiki/GUID
 
-        unitData = {};
-        unitData["name"] = unitName;
-        unitData["time"] = nil;
         if hasValue(SHARED_POTION_COOLDOWNS, spellName) and isPassiveEffect then
-            unitData["time"] = GetTime();
+            potionTimers[getUnitName(unitName, unitRealm)]["time"] = GetTime();
         end
 
-        shoutData = {};
-        shoutData["name"] = unitName;
-        shoutData["time"] = nil;
         if spellName == "Challenging Shout" then
-            shoutData["time"] = GetTime();
+            shoutTimers[getUnitName(unitName, unitRealm)]["time"] = GetTime();
         end
-
-        potionTimers[getUnitName(unitName, unitRealm)] = unitData;
-        shoutTimers[getUnitName(unitName, unitRealm)] = shoutData;
     end
 end);
 
