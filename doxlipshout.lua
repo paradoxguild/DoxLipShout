@@ -6,6 +6,7 @@ local POTION_CD = (60 * 2);
 local SHOUT_CD = (60 * 10);
 
 local dragging = false;
+local debug = false;
 
 local function makeMovable(frame, trackFrameData)
     -- frame:SetUserPlaced(true);
@@ -167,6 +168,11 @@ frame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3, arg4)
         spellId = arg3;
         guid = arg2;
         isPassiveEffect = string.len(guid) > 7 and string.sub(guid, 1, 7) == "Cast-4-"; -- type 4 can be seen https://wowpedia.fandom.com/wiki/GUID
+        spellName = strtrim(spellName);
+
+        if arg1 == "player" and debug then
+            print("'" .. spellName .. "'' used by " .. unitName .. " (ID=" .. tostring(spellId) .. ", GUID=" .. guid .. ") passive? -> " .. tostring(isPassiveEffect));
+        end
 
         if hasValue(SHARED_POTION_COOLDOWNS, spellName) and isPassiveEffect then
             potionTimers[getUnitName(unitName, unitRealm)]["time"] = GetTime();
