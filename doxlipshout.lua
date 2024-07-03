@@ -38,25 +38,29 @@ msgFrame:SetBackdrop({
 	insets = { left = 4, right = 4, top = 4, bottom = 4 }
 });
 msgFrame:SetBackdropColor(0, 0, 0, 0.6);
-msgFrame:SetPoint("CENTER", 0, 0);
 msgFrame:SetFrameStrata("MEDIUM");
+msgFrame:SetClampedToScreen(true);
 makeMovable(msgFrame, true);
 msgFrame.text = msgFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight");
 msgFrame.text:SetPoint("CENTER", msgFrame);
 msgFrame.text:SetText("");
 msgFrame.text:SetJustifyH("LEFT");
 msgFrame:Show();
+msgFrame:ClearAllPoints();
+msgFrame:SetPoint("CENTER", 0, 0);
 
 local loadFrame = CreateFrame("Frame");
 loadFrame:RegisterEvent("ADDON_LOADED");
 loadFrame:SetScript("OnEvent", function()
-    if not frameData then
-        msgFrame:SetPoint("CENTER", 0, 0);
+    print("DoxLipShout Load..");
+    if not frameData or next(frameData) == nil then
+        print("DoxLipShout Set Initial Position");
         frameData = {
-            ["x"] = msgFrame:GetLeft(),
-            ["y"] = msgFrame:GetBottom()
+            ["x"] = msgFrame:GetLeft() or 0,
+            ["y"] = msgFrame:GetBottom() or 0
         };
     end
+    print("DoxLipShout Loaded");
 end);
 
 local function hasValue(tab, val)
@@ -128,17 +132,24 @@ end
 local function populateTimerPlaceholders()
     for _, value in ipairs(friendlyUnits) do
         unitName, unitRealm = UnitName(value);
-
         key = getUnitName(unitName, unitRealm);
 
-        if not potionTimers[key] then
+        if potionTimers == nil then
+            potionTimers = {};
+        end
+
+        if shoutTimers == nil then
+            shoutTimers = {};
+        end
+
+        if potionTimers[key] == nil then
             unitData = {};
             unitData["name"] = unitName;
             unitData["time"] = nil;
             potionTimers[key] = unitData;
         end
 
-        if not shoutTimers[key] then
+        if shoutTimers[key] == nil then
             shoutData = {};
             shoutData["name"] = unitName;
             shoutData["time"] = nil;
@@ -169,16 +180,19 @@ end);
 
 C_Timer.NewTicker(1, function()
     friendlyUnits = getInstanceFriendlyUnits();
+
     populateTimerPlaceholders();
+
     msgFrame.text:SetText(buildText());
-
-    stringWidth = msgFrame.text:GetStringWidth() + 20;
-
-    msgFrame:SetWidth(stringWidth);
+    msgFrame:SetWidth(msgFrame.text:GetStringWidth() + 20);
     msgFrame:SetHeight(msgFrame.text:GetStringHeight() + 20);
 
-    if frameData ~= nil and not dragging then
+    if frameData ~= nil and next(frameData) ~= nil and not dragging then
         msgFrame:ClearAllPoints();
-        msgFrame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", frameData["x"], frameData["y"]);
+        if frameData["x"] == 0 and frameData["y"] == 0 then
+            msgFrame:SetPoint("Center", 0, 0);
+        else
+            msgFrame:SetPoint("BOTTOMLEFT", UIParent, "BOTTOMLEFT", frameData["x"], frameData["y"]);
+        end
     end
 end)
