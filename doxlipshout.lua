@@ -1,6 +1,7 @@
 local SHARED_POTION_COOLDOWNS = {
     "Greater Stoneshield", "Stoneshield", "Invulnerability", "Arcane Protection", "Fire Protection", "Frost Protection", "Holy Protection", "Nature Protection",
-    "Shadow Protection", "Mighty Rage", "Great Rage", "Rage", "Healing Potion", "Rejuvenation Potion", "Wildvine Potion", "Free Action", "Resistance"
+    "Shadow Protection", "Mighty Rage", "Great Rage", "Rage", "Healing Potion", "Rejuvenation Potion", "Wildvine Potion", "Free Action", "Resistance", "Speed"
+    -- TODO: Living Action Potion, Invisibility, Dreamless sleep potion, Jungle remedy, Restorative Potion
 };
 local POTION_CD = (60 * 2);
 local SHOUT_CD = (60 * 10);
@@ -88,20 +89,32 @@ end
 
 local function getInstanceFriendlyUnits()
     units = {};
+    unitCount = 0;
     if UnitExists("player") and isWarrior("player") then
-        table.insert(units, "player");
+        unitName, unitRealm = UnitName("player");
+        unitCount = unitCount + 1;
+        table.insert(units, getUnitName(unitName, unitRealm));
     end
     for i = 1, 5 do
         local unit = format("%s%i", 'party', i);
         if UnitExists(unit) and isWarrior(unit) then
-            table.insert(units, unit);
+            unitName, unitRealm = UnitName(unit);
+            unitCount = unitCount + 1;
+            table.insert(units, getUnitName(unitName, unitRealm));
         end
     end
     for i = 1, 40 do
         local unit = format("%s%i", 'raid', i);
         if UnitExists(unit) and isWarrior(unit) then
-            table.insert(units, unit);
+            unitName, unitRealm = UnitName(unit);
+            unitCount = unitCount + 1;
+            table.insert(units, getUnitName(unitName, unitRealm));
         end
+    end
+    if unitCount == 0 then
+        msgFrame:Hide();
+    else
+        msgFrame:Show();
     end
     return units;
 end
@@ -113,28 +126,28 @@ end
 local function buildText()
     output = "";
     for key, value in pairs(potionTimers) do
-        if string.len(output) > 0 then
-            output = output .. "\n";
-        end
-        duration = value["time"] ~= nil and math.floor(GetTime() - value["time"] + 0.5) or POTION_CD;
-        potionCDText = duration < POTION_CD and colorText("N " .. (POTION_CD - duration) .. "s", "FFFF0000") or colorText("Y", "FF008000");
-        shoutCDText = colorText("Y", "FF008000");
-        if shoutTimers[key] ~= nil then
-            shoutDuration = shoutTimers[key]["time"] ~= nil and math.floor(GetTime() - shoutTimers[key]["time"]) or SHOUT_CD;
-            if shoutDuration < SHOUT_CD then
-                shoutCDText = colorText("N " .. (SHOUT_CD - shoutDuration) .. "s", "FFFF0000");
+        if value ~= nil then
+            if string.len(output) > 0 then
+                output = output .. "\n";
             end
+            duration = value["time"] ~= nil and math.floor(GetTime() - value["time"] + 0.5) or POTION_CD;
+            potionCDText = duration < POTION_CD and colorText("N " .. (POTION_CD - duration) .. "s", "FFFF0000") or colorText("Y", "FF008000");
+            shoutCDText = colorText("Y", "FF008000");
+            if shoutTimers[key] ~= nil then
+                shoutDuration = shoutTimers[key]["time"] ~= nil and math.floor(GetTime() - shoutTimers[key]["time"]) or SHOUT_CD;
+                if shoutDuration < SHOUT_CD then
+                    shoutCDText = colorText("N " .. (SHOUT_CD - shoutDuration) .. "s", "FFFF0000");
+                end
+            end
+            output = output .. value["name"] .. ": Potion " .. potionCDText .. " | Shout " .. shoutCDText;
         end
-        output = output .. value["name"] .. ": Potion " .. potionCDText .. " | Shout " .. shoutCDText;
     end
     return output;
 end
 
 local function populateTimerPlaceholders()
-    for _, value in ipairs(friendlyUnits) do
-        unitName, unitRealm = UnitName(value);
-        key = getUnitName(unitName, unitRealm);
-
+    -- Populate units
+    for _, unitKey in ipairs(friendlyUnits) do
         if potionTimers == nil then
             potionTimers = {};
         end
@@ -143,18 +156,29 @@ local function populateTimerPlaceholders()
             shoutTimers = {};
         end
 
-        if potionTimers[key] == nil then
+        if potionTimers[unitKey] == nil then
             unitData = {};
             unitData["name"] = unitName;
             unitData["time"] = nil;
-            potionTimers[key] = unitData;
+            potionTimers[unitKey] = unitData;
         end
 
-        if shoutTimers[key] == nil then
+        if shoutTimers[unitKey] == nil then
             shoutData = {};
             shoutData["name"] = unitName;
             shoutData["time"] = nil;
-            shoutTimers[key] = shoutData;
+            shoutTimers[unitKey] = shoutData;
+        end
+    end
+    -- Remove old units
+    for unitKey, _ in pairs(potionTimers) do
+        if not hasValue(friendlyUnits, unitKey) then
+            potionTimers[unitKey] = nil;
+        end
+    end
+    for unitKey, _ in pairs(shoutTimers) do
+        if not hasValue(friendlyUnits, unitKey) then
+            shoutTimers[unitKey] = nil;
         end
     end
 end
@@ -162,9 +186,10 @@ end
 local frame = CreateFrame("Frame");
 frame:RegisterEvent("UNIT_SPELLCAST_SUCCEEDED");
 frame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3, arg4)
-    if hasValue(friendlyUnits, arg1) then
+    unitName, unitRealm = UnitName(arg1);
+    key = getUnitName(unitName, unitRealm);
+    if hasValue(friendlyUnits, key) then
         spellName, rank, icon, castTime, minRange, maxRange = GetSpellInfo(arg3);
-        unitName, unitRealm = UnitName(arg1);
         spellId = arg3;
         guid = arg2;
         isPassiveEffect = string.len(guid) > 7 and string.sub(guid, 1, 7) == "Cast-4-"; -- type 4 can be seen https://wowpedia.fandom.com/wiki/GUID
@@ -175,11 +200,11 @@ frame:SetScript("OnEvent", function(self, event, arg1, arg2, arg3, arg4)
         end
 
         if hasValue(SHARED_POTION_COOLDOWNS, spellName) and isPassiveEffect then
-            potionTimers[getUnitName(unitName, unitRealm)]["time"] = GetTime();
+            potionTimers[key]["time"] = GetTime();
         end
 
         if spellName == "Challenging Shout" then
-            shoutTimers[getUnitName(unitName, unitRealm)]["time"] = GetTime();
+            shoutTimers[key]["time"] = GetTime();
         end
     end
 end);
