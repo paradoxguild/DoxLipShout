@@ -9,6 +9,9 @@ local SHOUT_CD = (60 * 10);
 local dragging = false;
 local debug = false;
 
+-- potionTimers = {};
+-- shoutTimers = {};
+
 local function makeMovable(frame, trackFrameData)
     -- frame:SetUserPlaced(true);
     frame:EnableMouse(true);
@@ -123,10 +126,18 @@ local function colorText(text, color)
     return "\124c" .. color .. text .. "\124r";
 end
 
+local function getDisplayName(fullName)
+    if string.find(fullName, "-") ~= nil then
+        return string.sub(fullName, 1, string.find(fullName, "-") - 1);
+    end
+    return fullName;
+end
+
 local function buildText()
     output = "";
     for key, value in pairs(potionTimers) do
         if value ~= nil then
+            displayKey = getDisplayName(key);
             if string.len(output) > 0 then
                 output = output .. "\n";
             end
@@ -139,7 +150,7 @@ local function buildText()
                     shoutCDText = colorText("N " .. (SHOUT_CD - shoutDuration) .. "s", "FFFF0000");
                 end
             end
-            output = output .. value["name"] .. ": Potion " .. potionCDText .. " | Shout " .. shoutCDText;
+            output = output .. displayKey .. ": Potion " .. potionCDText .. " | Shout " .. shoutCDText;
         end
     end
     return output;
@@ -158,14 +169,12 @@ local function populateTimerPlaceholders()
 
         if potionTimers[unitKey] == nil then
             unitData = {};
-            unitData["name"] = unitName;
             unitData["time"] = nil;
             potionTimers[unitKey] = unitData;
         end
 
         if shoutTimers[unitKey] == nil then
             shoutData = {};
-            shoutData["name"] = unitName;
             shoutData["time"] = nil;
             shoutTimers[unitKey] = shoutData;
         end
