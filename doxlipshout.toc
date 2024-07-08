@@ -1,5 +1,5 @@
 ## Interface: 100200
 ## Title: DoxLipShout
-## Version: 1.0.4
+## Version: 1.0.5
 ## SavedVariables: potionTimers, shoutTimers, friendlyUnits, frameData
 doxlipshout.lua
